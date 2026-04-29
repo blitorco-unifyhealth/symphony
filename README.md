@@ -47,22 +47,32 @@ JSON-RPC 2.0 over stdio to drive threads and turns (`elixir/lib/symphony_elixir/
 
 ### Claude and other models
 
-Symphony does not embed Anthropic or other vendor SDKs. To use **Claude** (or another model) for
-orchestrated turns, configure the **Codex** process you launch—typically via `codex.command` flags
-such as `--config` and the model fields your Codex build supports—so the same App Server session
-talks to the provider you intend. If you use **Cursor**, Claude and other models are available
-inside Cursor’s own agent and CLI products; that is separate from Symphony’s subprocess unless you
-point `codex.command` at a binary that preserves the Codex App Server wire protocol.
+Symphony does not embed Anthropic or other vendor SDKs. **Claude integration** for orchestrated
+turns is entirely about how you launch **Codex App Server**: set `codex.command` in `WORKFLOW.md`
+so the Codex build you run selects the model and provider your install supports (flags such as
+`--config`, provider auth on the worker machine, and so on). The Elixir reference documents a
+pattern where the command string passes model configuration into `app-server`; see the example under
+**Configuration** in [elixir/README.md](elixir/README.md) (`codex.command` with `--config` and
+`app-server`).
+
+If you use **Cursor** (IDE or CLI), Claude and other models are configured in Cursor’s own product
+surfaces. That is separate from Symphony’s worker subprocess unless you point `codex.command` at a
+binary that still speaks the **same App Server JSON-RPC session** Symphony already implements
+(`elixir/lib/symphony_elixir/codex/app_server.ex`, [`SPEC.md`](SPEC.md)).
 
 ### Cursor Agent (`cursor` CLI)
 
-Cursor ships a **CLI agent** for headless and scripted use ([Headless CLI](https://cursor.com/docs/cli/headless)).
-That is useful for automation alongside or outside Symphony. This repository’s orchestration path
-is tested with `codex app-server`; swapping in `cursor agent` (or similar) as `codex.command` is
-only viable when the replacement implements the **same App Server JSON-RPC session** the worker
-already expects. Treat any such swap as a custom integration and validate thread startup, tool
-calls (including optional `linear_graphql`), and turn completion against your workflow before
-depending on it unattended.
+Cursor ships a **CLI agent** for headless and scripted use ([Headless CLI](https://cursor.com/docs/cli/headless),
+[CLI overview](https://cursor.com/docs/cli/overview)). Typical invocations look like
+`cursor agent --print --force <prompt>` against a repo workspace; that workflow is aimed at
+interactive or scripted coding in Git checkouts, not at replacing Codex unless you provide an
+App Server–compatible bridge.
+
+This repository’s orchestration path is tested with `codex app-server`. Swapping in
+`cursor agent` (or any other binary) as `codex.command` is only viable when the replacement
+implements the **same App Server JSON-RPC session** the worker already expects. Treat any such swap
+as a custom integration and validate thread startup, tool calls (including optional
+`linear_graphql`), and turn completion against your workflow before depending on it unattended.
 
 ---
 
