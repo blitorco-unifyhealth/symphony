@@ -34,6 +34,9 @@ help with the setup:
 > Set up Symphony for my repository based on
 > https://github.com/openai/symphony/blob/main/elixir/README.md
 
+For how **Claude** and **Cursor Agent** relate to the Elixir worker versus a local Cursor checkout,
+see [Agents: Codex, Cursor CLI, and Claude](#agents-codex-cursor-cli-and-claude) below.
+
 ## Agents: Codex, Cursor CLI, and Claude
 
 Symphony’s Elixir worker runs one subprocess per issue: whatever shell command you set as
