@@ -36,43 +36,66 @@ help with the setup:
 
 ## Agents: Codex, Cursor CLI, and Claude
 
-The subsections below cover **Claude integration** (through the Codex process you configure) and
-**Cursor Agent** (the `cursor` CLI) in relation to Symphony’s reference worker.
-
-Symphony’s reference worker runs whatever shell command you set under `codex.command` in `WORKFLOW.md`
-(see [elixir/README.md](elixir/README.md)). Today that command is expected to be **OpenAI Codex in
-[App Server mode](https://developers.openai.com/codex/app-server/)**: the Elixir client speaks
-JSON-RPC 2.0 over stdio to drive threads and turns (`elixir/lib/symphony_elixir/codex/app_server.ex`,
+Symphony’s Elixir worker runs one subprocess per issue: whatever shell command you set as
+`codex.command` in `WORKFLOW.md` (see [elixir/README.md](elixir/README.md)). The supported,
+tested path is **OpenAI Codex in [App Server mode](https://developers.openai.com/codex/app-server/)**:
+JSON-RPC 2.0 over stdio for threads and turns (`elixir/lib/symphony_elixir/codex/app_server.ex`,
 [`SPEC.md`](SPEC.md)).
 
-### Claude and other models
+The sections below separate **Claude** (model choice inside the Codex process) from **Cursor Agent**
+(Cursor’s own CLI), because they are configured in different places even though both can involve
+Anthropic models in your organization.
 
-Symphony does not embed Anthropic or other vendor SDKs. **Claude integration** for orchestrated
-turns is entirely about how you launch **Codex App Server**: set `codex.command` in `WORKFLOW.md`
-so the Codex build you run selects the model and provider your install supports (flags such as
-`--config`, provider auth on the worker machine, and so on). The Elixir reference documents a
-pattern where the command string passes model configuration into `app-server`; see the example under
-**Configuration** in [elixir/README.md](elixir/README.md) (`codex.command` with `--config` and
-`app-server`).
+### Claude integration (via Codex App Server)
 
-If you use **Cursor** (IDE or CLI), Claude and other models are configured in Cursor’s own product
-surfaces. That is separate from Symphony’s worker subprocess unless you point `codex.command` at a
-binary that still speaks the **same App Server JSON-RPC session** Symphony already implements
-(`elixir/lib/symphony_elixir/codex/app_server.ex`, [`SPEC.md`](SPEC.md)).
+Symphony does not bundle Anthropic SDKs. **Claude** (or any other model your Codex install supports)
+shows up only through **how you start `app-server`**: the full `codex.command` string in `WORKFLOW.md`
+is executed on the worker, so flags, config files, and environment variables are whatever your Codex
+build expects.
+
+Concrete pattern from the Elixir docs: pass model selection into Codex with `--config` on the same
+line as `app-server`:
+
+```yaml
+codex:
+  command: "$CODEX_BIN --config 'model=\"gpt-5.5\"' app-server"
+```
+
+Swap the `model=...` value (and any provider/auth setup on the machine) for the Claude-capable
+configuration your Codex release documents. Unattended orchestration flows often also rely on
+optional tools such as `linear_graphql` (see [elixir/README.md](elixir/README.md)); confirm those
+still work after changing model or provider.
 
 ### Cursor Agent (`cursor` CLI)
 
-Cursor ships a **CLI agent** for headless and scripted use ([Headless CLI](https://cursor.com/docs/cli/headless),
-[CLI overview](https://cursor.com/docs/cli/overview)). Typical invocations look like
-`cursor agent --print --force <prompt>` against a repo workspace; that workflow is aimed at
-interactive or scripted coding in Git checkouts, not at replacing Codex unless you provide an
-App Server–compatible bridge.
+**Cursor Agent** is Cursor’s headless/scriptable interface ([Headless CLI](https://cursor.com/docs/cli/headless),
+[CLI overview](https://cursor.com/docs/cli/overview)). You typically run it inside a Git checkout,
+for example:
 
-This repository’s orchestration path is tested with `codex app-server`. Swapping in
-`cursor agent` (or any other binary) as `codex.command` is only viable when the replacement
-implements the **same App Server JSON-RPC session** the worker already expects. Treat any such swap
-as a custom integration and validate thread startup, tool calls (including optional
-`linear_graphql`), and turn completion against your workflow before depending on it unattended.
+```bash
+cursor agent --print --force "your prompt here"
+```
+
+That is **not** the same protocol as Codex App Server. Cursor uses its own session, permissions,
+and model picker (including Claude when enabled in Cursor). Repository automation that lives in
+**Cursor rules and Agent Skills** (for example under `.cursor/` or paths described in Cursor’s docs)
+applies to Cursor-driven sessions, not automatically to Symphony’s subprocess unless you redesign
+the boundary.
+
+### Using Cursor Agent with Symphony
+
+This repo’s orchestration is validated against `codex app-server`. Pointing `codex.command` at
+`cursor agent` (or any other binary) is only safe when that binary implements the **same App Server
+JSON-RPC session** the Elixir worker already speaks. Without such a bridge, treat **Symphony +
+Codex** and **Cursor Agent in a checkout** as two integration surfaces:
+
+| Surface | What you configure | Typical use |
+| --- | --- | --- |
+| Symphony worker | `codex.command`, `WORKFLOW.md`, Codex skills under `.codex/` | Long-running issue workspaces, Linear-driven runs |
+| Cursor Agent | Cursor CLI/IDE, Cursor rules and skills | Interactive or scripted edits in a repo clone |
+
+If you build or adopt a bridge, revalidate thread startup, tool calls (including optional
+`linear_graphql`), and turn completion before relying on it in unattended workflows.
 
 ---
 
