@@ -36,6 +36,9 @@ help with the setup:
 
 ## Agents: Codex, Cursor CLI, and Claude
 
+The subsections below cover **Claude integration** (through the Codex process you configure) and
+**Cursor Agent** (the `cursor` CLI) in relation to Symphony’s reference worker.
+
 Symphony’s reference worker runs whatever shell command you set under `codex.command` in `WORKFLOW.md`
 (see [elixir/README.md](elixir/README.md)). Today that command is expected to be **OpenAI Codex in
 [App Server mode](https://developers.openai.com/codex/app-server/)**: the Elixir client speaks
